@@ -5,6 +5,7 @@
 import numpy as np
 import gym
 from gym.spaces import Discrete, Box
+import matplotlib.pyplot as plt
 
 # ================================================================
 # Policies
@@ -27,8 +28,13 @@ class DeterministicDiscreteActionLinearPolicy(object):
     def act(self, ob):
         """
         """
+        print("ob ", ob)
+        print("W ",self.W)
+        print("b ",self.b)
         y = ob.dot(self.W) + self.b
+        print("y ", y)
         a = y.argmax()
+        print("a ", a)
         return a
 
 class DeterministicContinuousActionLinearPolicy(object):
@@ -79,9 +85,9 @@ def make_policy(theta):
 
 # Task settings:
 env = gym.make('CartPole-v0') # Change as needed
-num_steps = 800 # maximum length of episode
+num_steps = 500 # maximum length of episode
 # Alg settings:
-n_iter = 10 # number of iterations of CEM
+n_iter = 3 # number of iterations of CEM
 batch_size = 25 # number of samples per batch
 elite_frac = 0.2 # fraction of samples used as elite set
 
@@ -96,6 +102,15 @@ else:
 theta_mean = np.zeros(dim_theta)
 theta_std = np.ones(dim_theta)
 
+# (One of?) Good CartPole result
+#theta_mean = np.array([0.2226394,  0.37167546,-0.23130909,-0.51706018,-3.84031352, 0.40085067,-2.87828687, 0.47947236 ,0.20460138 ,0.19369949])
+#theta_std = np.array([  7.37634136e-03,  9.64920053e-03,   6.17346100e-04,   8.99188496e-03,
+#            3.63448041e-02,   3.40082449e-02,   5.78441799e-04,   2.09394903e-03,
+#                3.15217928e-04,   3.67459568e-03])
+
+theta_mean_result = np.empty([n_iter,dim_theta])
+theta_std_result = np.empty([n_iter,dim_theta])
+
 # Now, for the algorithm
 for iteration in range(n_iter):
     # Sample parameter vectors
@@ -108,9 +123,21 @@ for iteration in range(n_iter):
     elite_inds = np.argsort(rewards)[batch_size - n_elite:batch_size]
     elite_thetas = [thetas[i] for i in elite_inds]
     elite_array = np.asarray(elite_thetas)
+    #print(elite_array)
     # Update theta_mean, theta_std
     for i in range(dim_theta):
         theta_mean[i] = elite_array[:,i].mean()
         theta_std[i] = elite_array[:,i].std()
-    print("iteration %i. mean f: %8.3g. max f: %8.3g"%(iteration, np.mean(rewards), np.max(rewards)))
+    print("iteration %i. mean f: %8.3g. max f: %8.3g "%(iteration, np.mean(rewards), np.max(rewards)))
+    theta_mean_result[iteration,:] = theta_mean
+    theta_std_result[iteration,:] = theta_std
     do_episode(make_policy(theta_mean), env, num_steps, render=True)
+
+plt.figure(1)
+plt.subplot(211)
+plt.plot(np.arange(0,n_iter,1), theta_mean_result)
+plt.subplot(212)
+plt.plot(np.arange(0,n_iter,1), theta_std_result)
+plt.show()
+print(theta_mean_result)
+print(theta_std_result)
